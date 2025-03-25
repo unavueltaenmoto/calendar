@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba RangeCalendar</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.js" integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
+</head>
+<body>
+    <h1>Prueba de RangeCalendar</h1>
+    <div>
+        <input type="text" id="inicio" placeholder="">
+        <input type="text" id="fin" placeholder="">
+    </div>
+    <label for="calendarInput">Selecciona una fecha o rango:</label>
+    <input type="text" id="calendarInput" placeholder="Selecciona una fecha" class="calendar-picker">
+    <div id="calendarContainer" class="calendar-container"></div>
+
+   
+
+    <script type="module">
+        import RangeCalendar from './scripts/RangeCalendar.js';
+
+        // Inicializar el calendario
+        const calendar = new RangeCalendar({
+            type: 'mes', //'rango' | 'día' | 'semana' | 'mes';
+            minDate: new Date(2024, 0, 1), 
+            maxDate: new Date(),
+            inputElement: document.getElementById('calendarInput'),
+            calendarContainer: document.getElementById('calendarContainer'),
+            dateFormat: 'DD MMM YYYY',
+            disabledDates: [],
+            disableWeekends: false,
+            dateSeparator: ' al ',
+            tooltipText: { one: 'día', other: 'días' },
+            showTooltip: true,
+            minDays: 1,
+            maxDays: 10,
+            startDate: new Date('2025-03-04'),
+            endDate: new Date('2025-03-11'),
+            fechaVacia: false
+        });
+
+        // Registrar el evento antes de que se emita
+        calendar.on('renderCompleted', (e) => {
+            console.log('El calendario se ha renderizado.');
+            if (e.startDate) {
+                $('#inicio').val(calendar.formatDate(e.startDate, 'YYYY/MM/DD')); // Fecha de inicio
+            }
+            if (e.endDate) {
+                $('#fin').val(calendar.formatDate(e.endDate, 'YYYY/MM/DD')); // Fecha de fin
+            }
+        });
+
+        calendar.triggerRenderCompleted();
+
+        calendar.on('monthSelected', ({ startDate, endDate }) => {
+            console.log('Mes seleccionado:', startDate, endDate);
+            $('#inicio').val(calendar.formatDate(startDate, 'YYYY/MM/DD')); // Fecha de inicio en formato dinámico
+            $('#fin').val(calendar.formatDate(endDate, 'YYYY/MM/DD')); // Fecha de fin en formato dinámico
+        });
+
+        calendar.on('rangeSelected', (e) => {
+            console.log('Rango seleccionado:', e.startDate, e.endDate);
+            $('#inicio').val(calendar.formatDate(e.startDate, 'YYYY/MM/DD')); // Fecha de inicio en formato dinámico
+            $('#fin').val(calendar.formatDate(e.endDate, 'YYYY/MM/DD')); // Fecha de fin en formato dinámico
+        });
+
+        calendar.on('dateSelected', (e) => {
+            console.log('Fecha seleccionada:', e.date);
+            $('#inicio').val(calendar.formatDate(e.date, 'YYYY/MM/DD')); // Fecha seleccionada en formato dinámico
+            $('#fin').val(calendar.formatDate(e.date, 'YYYY/MM/DD')); // Misma fecha para inicio y fin
+        });
+
+        calendar.on('weekSelected', (e) => {
+            console.log('Semana seleccionada:', e.startDate, e.endDate);
+            $('#inicio').val(calendar.formatDate(e.startDate, 'YYYY/MM/DD')); // Fecha de inicio de la semana
+            $('#fin').val(calendar.formatDate(e.endDate, 'YYYY/MM/DD')); // Fecha de fin de la semana
+        });
+
+        calendar.on('calendarOpened', () => {
+            console.log('El calendario se abrió.');
+        });
+
+        calendar.on('calendarClosed', () => {
+            console.log('El calendario se cerró.');
+        });
+    </script>
+</body>
+</html>

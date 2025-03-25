@@ -1,0 +1,246 @@
+/* Contenedor principal del calendario */
+.calendar-container {
+    width: 340px; /* Ancho fijo del calendario */
+    max-width: 100%; /* Asegura que no se desborde en pantallas pequeñas */
+    margin: 0 auto; /* Centrar el calendario horizontalmente */
+    background-color: #fff; /* Fondo blanco */
+    border: 1px solid #ccc; /* Borde gris claro */
+    border-radius: 8px; /* Bordes redondeados */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra para darle profundidad */
+    padding: 16px; /* Espaciado interno */
+    position: absolute; /* Posición absoluta para que flote */
+    z-index: 1000; /* Asegura que esté por encima de otros elementos */
+}
+
+/* Estilo específico para el tipo "mes" */
+.calendar-container--month {
+    width: 250px; /* Ancho reducido para la vista de meses */
+}
+
+/* Mostrar el calendario con animación */
+.calendar-container.open {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    animation: fadeIn 0.3s ease;
+}
+
+/* Encabezado del calendario */
+.calendar-header {
+    display: flex;
+    justify-content: space-between; /* Botones de navegación a los extremos */
+    align-items: center;
+    margin-bottom: 8px; /* Espaciado debajo del encabezado */
+}
+
+.calendar-header button {
+    background-color: transparent; /* Color rosa */
+    color: #2d3338; /* Texto blanco */
+    border:1px solid rgba(212,214,225,0.5) !important;
+    border-radius: 50%;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.calendar-header span {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Tabla del calendario */
+.calendar-table {
+    width: 100%; /* Asegura que la tabla ocupe el ancho del contenedor */
+    border-collapse: collapse; /* Elimina espacios entre celdas */
+}
+
+.calendar-table th {
+    border: 0; /* Borde invisible para evitar conflictos */
+    border-radius: 0; /* Bordes redondeados */
+    text-align: center; /* Centrar texto */
+    padding: 8px; /* Espaciado interno */
+    width: 14.28%; /* Distribuir uniformemente las celdas (100% / 7 días) */
+    height: 40px; /* Altura fija para las celdas */
+    font-size: 13px;
+    box-sizing: border-box; /* Asegura que el borde no afecte el tamaño */
+}
+
+.calendar-table td {
+    border: 0; /* Borde invisible para evitar conflictos */
+    border-radius: 0; /* Bordes redondeados */
+    text-align: center; /* Centrar texto */
+    padding: 8px; /* Espaciado interno */
+    width: 14.28%; /* Distribuir uniformemente las celdas (100% / 7 días) */
+    height: 40px; /* Altura fija para las celdas */
+    font-size: 13px;
+    box-sizing: border-box; /* Asegura que el borde no afecte el tamaño */
+}
+
+/* Hover solo para días con fecha */
+.calendar-table td.calendar-day:hover:not(.disabled):not(.empty):not(.highlight-start):not(.highlight-range):not(.highlight-end) {
+    background-color: #fff; /* Fondo blanco */
+    color: #d5006c; /* Texto rosa */
+    border: 1px solid #d5006c; /* Borde rosa */
+    border-radius: 0; /* Bordes redondeados */
+    cursor: pointer; /* Cursor interactivo */
+    box-sizing: border-box; /* Asegura que el borde no afecte el tamaño */
+}
+
+/* Hover en modo rango */
+.calendar-table td.calendar-day:hover:not(.disabled):not(.empty) {
+    border: 1px solid #d5006c;
+    color: #d5006c;
+    background-color: rgba(213, 0, 108, 0.1); /* Fondo rosado claro */
+    box-sizing: border-box; /* Asegura que el borde no afecte el tamaño */
+}
+
+/* Días seleccionados */
+.calendar-day.selected {
+    background-color: #d5006c; /* Fondo rosado */
+    color: #fff; /* Texto blanco */
+    border: 1px solid #d5006c; /* Borde rosado */
+    border-radius: 0; /* Bordes redondeados */
+}
+
+/* Días deshabilitados */
+.calendar-day.disabled {
+    background-color: #FFF;
+    color: #D4D6E1;
+    font-style: italic;
+    pointer-events: none;
+}
+
+/* Estilo para los <td> vacíos */
+.calendar-table td.empty {
+    background-color: transparent; /* Fondo transparente */
+    cursor: default; /* Sin cursor interactivo */
+    pointer-events: none; /* Deshabilitar interacción */
+    border: none; /* Sin bordes */
+}
+
+/* Días resaltados (highlight) */
+.calendar-table td.calendar-day.highlight-start {
+    background-color: #d5006c; /* Fondo rosado */
+    color: #fff; /* Texto blanco */
+    border: 1px solid #d5006c; /* Borde rosado */
+    border-radius: 0; /* Bordes redondeados */
+    box-sizing: border-box; /* Asegura que el borde no afecte el tamaño */
+}
+
+.calendar-table td.calendar-day.highlight-range {
+    background-color: rgba(213, 0, 108, 0.1); /* Fondo rosado claro */
+    color: #d5006c; /* Texto rosado */
+    border-radius: 0; /* Bordes redondeados */
+    box-sizing: border-box; /* Asegura que el borde no afecte el tamaño */
+}
+
+.calendar-table td.calendar-day.highlight-end {
+    background-color: #d5006c; /* Fondo rosado */
+    color: #fff; /* Texto blanco */
+    border: 1px solid #d5006c; /* Borde rosado */
+    border-radius: 0; /* Bordes redondeados */
+    box-sizing: border-box; /* Asegura que el borde no afecte el tamaño */
+}
+
+/* Hover en días resaltados */
+.calendar-table td.calendar-day.highlight-start:hover,
+.calendar-table td.calendar-day.highlight-end:hover {
+    background-color: #d5006c !important; /* Mantener el fondo rosado */
+    color: #fff !important; /* Mantener el texto blanco */
+    border: 1px solid #d5006c !important; /* Mantener el borde rosado */
+    border-radius: 0; /* Bordes redondeados */
+    cursor: pointer;
+}
+
+.calendar-table td.calendar-day.highlight-range:hover {
+    background-color: rgba(213, 0, 108, 0.1); /* Mantener el fondo rosado claro */
+    color: #d5006c; /* Mantener el texto rosado */
+    cursor: pointer;
+}
+
+/* Tooltip del calendario */
+.calendar-tooltip {
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    display: none;
+    white-space: nowrap;
+}
+
+/* Animación de entrada */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Input del calendario */
+.calendar-picker {
+    color: #2D3338;
+    border-radius: 4px;
+    border: 1px solid #A9B1BF;
+    background: #FFF;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 24px;
+    padding: 5px;
+    display: flex;
+    align-items: flex-start;
+}
+/* Contenedor para los meses en el calendario */
+.calendar-table-months {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas de igual tamaño */
+    gap: 5px; /* Espaciado más pequeño entre los cuadros */
+    padding: 10px; /* Espaciado interno */
+    justify-items: center; /* Centrar los elementos horizontalmente */
+    align-items: center; /* Centrar los elementos verticalmente */
+    box-sizing: border-box; /* Asegura que el padding no afecte el tamaño total */
+}
+
+/* Estilo para los meses en el calendario */
+.calendar-month {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px; /* Ancho reducido */
+    height: 40px; /* Altura igual al ancho para que sea cuadrado */
+    text-align: center;
+    font-size: 12px; /* Tamaño de fuente más pequeño */
+    font-weight: bold;
+    border: 1px solid transparent; /* Borde inicial transparente */
+    border-radius: 2px; /* Bordes redondeados */
+    cursor: pointer;
+    box-sizing: border-box; /* Incluir el borde en el tamaño total */
+}
+
+/* Mes seleccionado */
+.calendar-month.selected {
+    background-color: #d5006c; /* Fondo rosado */
+    color: #fff; /* Texto blanco */
+    border: 1px solid #d5006c; /* Borde rosado */
+}
+
+/* Mes deshabilitado */
+.calendar-month.disabled {
+    background-color: #f5f5f5; /* Fondo gris claro */
+    color: #ccc; /* Texto gris */
+    cursor: not-allowed;
+}
+
+/* Hover en meses habilitados */
+.calendar-month:hover:not(.disabled) {
+    background-color: rgba(213, 0, 108, 0.1); /* Fondo rosado claro */
+    color: #d5006c; /* Texto rosado */
+    border: 1px solid #d5006c; /* Borde rosado */
+}
