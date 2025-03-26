@@ -216,34 +216,46 @@ class RangeCalendar {
             if (isNaN(day) || day === 0)
                 return;
             const cellDate = this.normalizeDate(new Date(this.currentYear, this.currentMonth, day));
-            const cellMonth = cell.getAttribute('data-month');
-            const cellYear = cell.getAttribute('data-year');
-            // Limpiar clases previas
-            cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
-            // Aplicar las clases correspondientes según el tipo
+            this.clearHighlightClasses(cell);
             if (this.type === 'día') {
-                if (cellDate.getTime() === startDate.getTime()) {
-                    cell.classList.add('highlight-start');
-                }
+                this.highlightDay(cell, cellDate, startDate);
             }
             else if (this.type === 'rango' || this.type === 'semana') {
-                if (cellDate.getTime() === startDate.getTime()) {
-                    cell.classList.add('highlight-start');
-                }
-                else if (endDate && cellDate.getTime() === endDate.getTime()) {
-                    cell.classList.add('highlight-end');
-                }
-                else if (endDate && cellDate > startDate && cellDate < endDate) {
-                    cell.classList.add('highlight-range');
-                }
+                this.highlightRangeOrWeek(cell, cellDate, startDate, endDate);
             }
-            else if (this.type === 'mes' && cellMonth && cellYear) {
-                const cellDate = new Date(parseInt(cellYear, 10), parseInt(cellMonth, 10), 1);
-                if (cellDate.getFullYear() === startDate.getFullYear() && cellDate.getMonth() === startDate.getMonth()) {
-                    cell.classList.add('highlight-start');
-                }
+            else if (this.type === 'mes') {
+                this.highlightMonth(cell, startDate);
             }
         });
+    }
+    clearHighlightClasses(cell) {
+        cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
+    }
+    highlightDay(cell, cellDate, startDate) {
+        if (cellDate.getTime() === startDate.getTime()) {
+            cell.classList.add('highlight-start');
+        }
+    }
+    highlightRangeOrWeek(cell, cellDate, startDate, endDate) {
+        if (cellDate.getTime() === startDate.getTime()) {
+            cell.classList.add('highlight-start');
+        }
+        else if (endDate && cellDate.getTime() === endDate.getTime()) {
+            cell.classList.add('highlight-end');
+        }
+        else if (endDate && cellDate > startDate && cellDate < endDate) {
+            cell.classList.add('highlight-range');
+        }
+    }
+    highlightMonth(cell, startDate) {
+        const cellMonth = cell.getAttribute('data-month');
+        const cellYear = cell.getAttribute('data-year');
+        if (cellMonth && cellYear) {
+            const cellDate = new Date(parseInt(cellYear, 10), parseInt(cellMonth, 10), 1);
+            if (cellDate.getFullYear() === startDate.getFullYear() && cellDate.getMonth() === startDate.getMonth()) {
+                cell.classList.add('highlight-start');
+            }
+        }
     }
     renderDayTableHeader(table) {
         const daysOfWeek = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];

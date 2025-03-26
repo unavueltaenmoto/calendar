@@ -281,43 +281,57 @@ class RangeCalendar {
 
     private applyHighlightClasses(): void {
         if (!this.startDate) return;
-    
+
         const cells = this.calendarContainer.querySelectorAll('.calendar-day');
         const startDate = this.normalizeDate(this.startDate);
         const endDate = this.endDate ? this.normalizeDate(this.endDate) : null;
-    
+
         cells.forEach((cell) => {
             const day = parseInt(cell.textContent ?? '0', 10);
             if (isNaN(day) || day === 0) return;
-    
+
             const cellDate = this.normalizeDate(new Date(this.currentYear, this.currentMonth, day));
-            const cellMonth = cell.getAttribute('data-month');
-            const cellYear = cell.getAttribute('data-year');
+            this.clearHighlightClasses(cell);
 
-            // Limpiar clases previas
-            cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
-    
-            // Aplicar las clases correspondientes según el tipo
             if (this.type === 'día') {
-                if (cellDate.getTime() === startDate.getTime()) {
-                    cell.classList.add('highlight-start');
-                }
+                this.highlightDay(cell, cellDate, startDate);
             } else if (this.type === 'rango' || this.type === 'semana') {
-                if (cellDate.getTime() === startDate.getTime()) {
-                    cell.classList.add('highlight-start');
-                } else if (endDate && cellDate.getTime() === endDate.getTime()) {
-                    cell.classList.add('highlight-end');
-                } else if (endDate && cellDate > startDate && cellDate < endDate) {
-                    cell.classList.add('highlight-range');
-                }
-            } else if (this.type === 'mes' && cellMonth && cellYear) {
-                const cellDate = new Date(parseInt(cellYear, 10), parseInt(cellMonth, 10), 1);
-
-                if (cellDate.getFullYear() === startDate.getFullYear() && cellDate.getMonth() === startDate.getMonth()) {
-                    cell.classList.add('highlight-start');
-                }
+                this.highlightRangeOrWeek(cell, cellDate, startDate, endDate);
+            } else if (this.type === 'mes') {
+                this.highlightMonth(cell, startDate);
             }
         });
+    }
+
+    private clearHighlightClasses(cell: Element): void {
+        cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
+    }
+
+    private highlightDay(cell: Element, cellDate: Date, startDate: Date): void {
+        if (cellDate.getTime() === startDate.getTime()) {
+            cell.classList.add('highlight-start');
+        }
+    }
+
+    private highlightRangeOrWeek(cell: Element, cellDate: Date, startDate: Date, endDate: Date | null): void {
+        if (cellDate.getTime() === startDate.getTime()) {
+            cell.classList.add('highlight-start');
+        } else if (endDate && cellDate.getTime() === endDate.getTime()) {
+            cell.classList.add('highlight-end');
+        } else if (endDate && cellDate > startDate && cellDate < endDate) {
+            cell.classList.add('highlight-range');
+        }
+    }
+
+    private highlightMonth(cell: Element, startDate: Date): void {
+        const cellMonth = cell.getAttribute('data-month');
+        const cellYear = cell.getAttribute('data-year');
+        if (cellMonth && cellYear) {
+            const cellDate = new Date(parseInt(cellYear, 10), parseInt(cellMonth, 10), 1);
+            if (cellDate.getFullYear() === startDate.getFullYear() && cellDate.getMonth() === startDate.getMonth()) {
+                cell.classList.add('highlight-start');
+            }
+        }
     }
 
     private renderDayTableHeader(table: HTMLTableElement): void {
