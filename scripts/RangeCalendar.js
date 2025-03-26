@@ -1,5 +1,6 @@
 class RangeCalendar {
     constructor(options) {
+        var _a, _b, _c, _d, _e, _f, _g;
         this.startDateInput = null;
         this.endDateInput = null;
         this.isGlobalEventRegistered = false;
@@ -13,22 +14,22 @@ class RangeCalendar {
         };
         // Asignar opciones
         this.type = options.type;
-        this.minDays = options.minDays || 1;
-        this.maxDays = options.maxDays || 30;
+        this.minDays = (_a = options.minDays) !== null && _a !== void 0 ? _a : 1;
+        this.maxDays = (_b = options.maxDays) !== null && _b !== void 0 ? _b : 30;
         this.startDate = options.startDate || null;
         this.endDate = options.endDate || null;
         this.minDate = options.minDate;
         this.maxDate = options.maxDate;
         this.inputElement = options.inputElement;
         this.calendarContainer = options.calendarContainer;
-        this.dateFormat = options.dateFormat || 'YYYY-MM-DD';
+        this.dateFormat = (_c = options.dateFormat) !== null && _c !== void 0 ? _c : 'YYYY-MM-DD';
         this.disabledDates = options.disabledDates || [];
         this.disableWeekends = options.disableWeekends || false;
-        this.dateSeparator = options.dateSeparator || ' - ';
+        this.dateSeparator = (_d = options.dateSeparator) !== null && _d !== void 0 ? _d : ' - ';
         this.tooltipText = options.tooltipText || { one: 'día', other: 'días' };
-        this.enableTooltip = options.enableTooltip !== undefined ? options.enableTooltip : true;
-        this.fechaVacia = options.fechaVacia !== undefined ? options.fechaVacia : true;
-        this.placeholder = options.placeholder || 'Selecciona una fecha';
+        this.enableTooltip = (_e = options.enableTooltip) !== null && _e !== void 0 ? _e : true;
+        this.fechaVacia = (_f = options.fechaVacia) !== null && _f !== void 0 ? _f : true;
+        this.placeholder = (_g = options.placeholder) !== null && _g !== void 0 ? _g : 'Selecciona una fecha';
         // Validaciones iniciales
         if (this.minDays > this.maxDays) {
             throw new Error('minDays no puede ser mayor que maxDays.');
@@ -39,10 +40,14 @@ class RangeCalendar {
         if (this.endDate && (this.endDate < this.minDate || this.endDate > this.maxDate)) {
             throw new Error('endDate está fuera del rango permitido.');
         }
+        if (this.type === 'día') {
+            this.endDate = null; // Asegurarse de que no haya un rango definido
+        }
         // Inicializar estado interno
         this.selectedDates = [];
         this.currentMonth = new Date().getMonth();
         this.currentYear = new Date().getFullYear();
+        this.selectDate = this.selectDate.bind(this);
         // Inicializar sistema de eventos
         this.events = {};
         // Inicializar el calendario
@@ -56,6 +61,10 @@ class RangeCalendar {
         this.attachInputEvents();
         // Renderizar el calendario al inicializar
         this.renderCalendar();
+        // Actualizar los inputs con las fechas por defecto
+        if (this.startDate) {
+            this.updateInput();
+        }
         // Ocultar el calendario después de la inicialización
         this.calendarContainer.style.display = 'none';
         // Actualizar el input con las fechas iniciales
@@ -74,7 +83,14 @@ class RangeCalendar {
     }
     emit(event, data) {
         if (this.events[event]) {
-            const sanitizedData = JSON.parse(JSON.stringify(data)); // Sanitizar datos
+            const sanitizedData = JSON.parse(JSON.stringify(data));
+            // Restaurar las fechas como instancias de Date
+            if (sanitizedData.startDate) {
+                sanitizedData.startDate = new Date(sanitizedData.startDate);
+            }
+            if (sanitizedData.endDate) {
+                sanitizedData.endDate = new Date(sanitizedData.endDate);
+            }
             this.events[event].forEach(callback => {
                 try {
                     callback(sanitizedData);
@@ -93,157 +109,217 @@ class RangeCalendar {
         });
     }
     renderCalendar() {
-        this.clearDynamicEvents(); // Limpia los eventos dinámicos
-        // Limpia el contenedor del calendario
+        this.clearDynamicEvents();
         this.calendarContainer.replaceChildren();
-        // Ajustar el ancho del contenedor según el tipo
+        this.adjustContainerWidth();
+        this.renderHeader();
+        this.renderTable();
+        this.disableOutOfRangeDatesIfNeeded();
+        // Aplicar las clases de resaltado para las fechas por defecto
+        this.applyHighlightClasses();
+        this.triggerRenderCompleted();
+    }
+    adjustContainerWidth() {
         if (this.type === 'mes') {
             this.calendarContainer.classList.add('calendar-container--month');
         }
         else {
             this.calendarContainer.classList.remove('calendar-container--month');
         }
-        // Crear encabezado con controles de navegación
+    }
+    renderHeader() {
         const header = document.createElement('div');
         header.className = 'calendar-header';
-        const prevButton = document.createElement('button');
-        prevButton.textContent = '<';
-        prevButton.addEventListener('click', (event) => {
-            event.stopPropagation();
-            if (this.type === 'mes') {
-                this.changeYear(-1); // Cambiar el año en lugar del mes
-            }
-            else {
-                this.changeMonth(-1); // Cambiar el mes
-            }
-        });
-        const nextButton = document.createElement('button');
-        nextButton.textContent = '>';
-        nextButton.addEventListener('click', (event) => {
-            event.stopPropagation();
-            if (this.type === 'mes') {
-                this.changeYear(1); // Cambiar el año en lugar del mes
-            }
-            else {
-                this.changeMonth(1); // Cambiar el mes
-            }
-        });
-        const monthYearDisplay = document.createElement('span');
-        if (this.type === 'mes') {
-            monthYearDisplay.textContent = `${this.currentYear}`;
-        }
-        else {
-            monthYearDisplay.textContent = `${this.getMonthName(this.currentMonth)} ${this.currentYear}`;
-        }
+        const prevButton = this.createNavigationButton('rounded-circle mo-i-arrow-ios-back pl-1 pr-2 py-1 border border-light', () => this.navigate(-1));
+        const nextButton = this.createNavigationButton('rounded-circle mo-i-arrow-ios-forward pl-2 pr-1 py-1 border border-light', () => this.navigate(1));
+        const monthYearDisplay = this.createMonthYearDisplay();
         header.appendChild(prevButton);
         header.appendChild(monthYearDisplay);
         header.appendChild(nextButton);
         this.calendarContainer.appendChild(header);
-        // Crear tabla para los días o meses del calendario
+    }
+    createNavigationButton(text, onClick) {
+        const button = document.createElement('button');
+        button.className = text;
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            onClick();
+        });
+        return button;
+    }
+    createMonthYearDisplay() {
+        const span = document.createElement('span');
+        span.textContent = this.type === 'mes'
+            ? `${this.currentYear}`
+            : `${this.getMonthName(this.currentMonth)} ${this.currentYear}`;
+        return span;
+    }
+    navigate(offset) {
+        if (this.type === 'mes') {
+            this.changeYear(offset);
+        }
+        else {
+            this.changeMonth(offset);
+        }
+    }
+    renderTable() {
         const table = document.createElement('table');
+        table.className = this.type === 'mes' ? 'calendar-table-months' : 'calendar-table';
         if (this.type === 'mes') {
-            table.className = 'calendar-table-months';
+            this.renderMonthTable(table);
         }
         else {
-            table.className = 'calendar-table';
-        }
-        if (this.type === 'mes') {
-            // Mostrar los nombres de los meses
-            const months = [
-                'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-                'Jul', 'Ago', 'Sept', 'Oct', 'Nov', 'Dic'
-            ];
-            let row = null;
-            months.forEach((month, index) => {
-                const cell = document.createElement('div'); // Cambiar de <td> a <div>
-                cell.setAttribute('role', 'button');
-                cell.setAttribute('aria-label', `Seleccionar ${month} ${this.currentYear}`);
-                cell.textContent = month;
-                cell.className = 'calendar-month'; // Agregar la clase para los meses
-                const monthDate = new Date(this.currentYear, index, 1);
-                const endOfMonth = new Date(this.currentYear, index + 1, 0);
-                // Deshabilitar meses fuera del rango permitido
-                if (monthDate > this.maxDate || endOfMonth < this.minDate) {
-                    cell.classList.add('disabled');
-                }
-                else {
-                    cell.addEventListener('click', () => this.selectDate(monthDate));
-                }
-                table.appendChild(cell); // Agregar directamente al contenedor
-            });
-        }
-        else {
-            // Encabezados de los días de la semana
-            const daysOfWeek = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-            const headerRow = document.createElement('tr');
-            daysOfWeek.forEach(day => {
-                const th = document.createElement('th');
-                th.textContent = day;
-                headerRow.appendChild(th);
-            });
-            table.appendChild(headerRow);
-            // Generar las celdas de los días
-            const firstDay = new Date(this.currentYear, this.currentMonth, 1).getDay();
-            const daysInMonth = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
-            let date = 1;
-            for (let i = 0; i < 6; i++) {
-                const row = document.createElement('tr');
-                for (let j = 0; j < 7; j++) {
-                    const cell = document.createElement('td');
-                    if (i === 0 && j < (firstDay === 0 ? 6 : firstDay - 1)) {
-                        cell.textContent = '';
-                    }
-                    else if (date > daysInMonth) {
-                        cell.textContent = '';
-                    }
-                    else {
-                        const currentDate = new Date(this.currentYear, this.currentMonth, date);
-                        // Verificar si la fecha está deshabilitada
-                        const normalizedCurrentDate = this.normalizeDate(currentDate);
-                        const normalizedMinDate = this.normalizeDate(this.minDate);
-                        const normalizedMaxDate = this.normalizeDate(this.maxDate);
-                        const isDisabled = normalizedCurrentDate < normalizedMinDate || normalizedCurrentDate > normalizedMaxDate ||
-                            this.disabledDates.some(d => this.normalizeDate(d).getTime() === normalizedCurrentDate.getTime()) ||
-                            (this.disableWeekends && (normalizedCurrentDate.getDay() === 0 || normalizedCurrentDate.getDay() === 6));
-                        if (!isDisabled) {
-                            cell.textContent = date.toString();
-                            cell.className = 'calendar-day';
-                            cell.addEventListener('click', () => this.selectDate(currentDate));
-                            // Resaltar semanas
-                            if (this.type === 'semana') {
-                                cell.addEventListener('mouseover', () => this.highlightWeek(currentDate));
-                                cell.addEventListener('mouseout', () => this.clearHighlight());
-                            }
-                            // Resaltar rangos
-                            if (this.type === 'rango') {
-                                cell.addEventListener('mouseover', (event) => this.highlightRange(currentDate, event));
-                                cell.addEventListener('mouseout', () => {
-                                    this.clearHighlight();
-                                    this.hideTooltip();
-                                });
-                            }
-                        }
-                        else {
-                            cell.textContent = date.toString();
-                            cell.className = 'calendar-day disabled';
-                        }
-                        date++;
-                    }
-                    row.appendChild(cell);
-                }
-                table.appendChild(row);
-            }
+            this.renderDayTable(table);
         }
         this.calendarContainer.appendChild(table);
-        // Deshabilitar días fuera del rango permitido si hay una fecha seleccionada
+    }
+    renderMonthTable(table) {
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sept', 'Oct', 'Nov', 'Dic'];
+        months.forEach((month, index) => {
+            const cell = this.createMonthCell(month, index);
+            table.appendChild(cell);
+        });
+    }
+    createMonthCell(month, index) {
+        const cell = document.createElement('div');
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('aria-label', `Seleccionar ${month} ${this.currentYear}`);
+        cell.setAttribute('data-month', index.toString()); // Agregar el mes como atributo
+        cell.setAttribute('data-year', this.currentYear.toString()); // Agregar el año como atributo
+        cell.textContent = month;
+        cell.className = 'calendar-month';
+        const monthDate = new Date(this.currentYear, index, 1);
+        const endOfMonth = new Date(this.currentYear, index + 1, 0);
+        if (monthDate > this.maxDate || endOfMonth < this.minDate) {
+            cell.classList.add('disabled');
+        }
+        else {
+            cell.addEventListener('click', () => this.selectDate(monthDate));
+        }
+        return cell;
+    }
+    renderDayTable(table) {
+        this.renderDayTableHeader(table);
+        this.renderDayTableBody(table);
+        // Aplicar las clases de resaltado después de renderizar la tabla
+        this.applyHighlightClasses();
+    }
+    applyHighlightClasses() {
+        if (!this.startDate)
+            return;
+        const cells = this.calendarContainer.querySelectorAll('.calendar-day');
+        const startDate = this.normalizeDate(this.startDate);
+        const endDate = this.endDate ? this.normalizeDate(this.endDate) : null;
+        cells.forEach((cell) => {
+            var _a;
+            const day = parseInt((_a = cell.textContent) !== null && _a !== void 0 ? _a : '0', 10);
+            if (isNaN(day) || day === 0)
+                return;
+            const cellDate = this.normalizeDate(new Date(this.currentYear, this.currentMonth, day));
+            const cellMonth = cell.getAttribute('data-month');
+            const cellYear = cell.getAttribute('data-year');
+            // Limpiar clases previas
+            cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
+            // Aplicar las clases correspondientes según el tipo
+            if (this.type === 'día') {
+                if (cellDate.getTime() === startDate.getTime()) {
+                    cell.classList.add('highlight-start');
+                }
+            }
+            else if (this.type === 'rango' || this.type === 'semana') {
+                if (cellDate.getTime() === startDate.getTime()) {
+                    cell.classList.add('highlight-start');
+                }
+                else if (endDate && cellDate.getTime() === endDate.getTime()) {
+                    cell.classList.add('highlight-end');
+                }
+                else if (endDate && cellDate > startDate && cellDate < endDate) {
+                    cell.classList.add('highlight-range');
+                }
+            }
+            else if (this.type === 'mes' && cellMonth && cellYear) {
+                const cellDate = new Date(parseInt(cellYear, 10), parseInt(cellMonth, 10), 1);
+                if (cellDate.getFullYear() === startDate.getFullYear() && cellDate.getMonth() === startDate.getMonth()) {
+                    cell.classList.add('highlight-start');
+                }
+            }
+        });
+    }
+    renderDayTableHeader(table) {
+        const daysOfWeek = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        const headerRow = document.createElement('tr');
+        daysOfWeek.forEach(day => {
+            const th = document.createElement('th');
+            th.textContent = day;
+            headerRow.appendChild(th);
+        });
+        table.appendChild(headerRow);
+    }
+    renderDayTableBody(table) {
+        const firstDay = new Date(this.currentYear, this.currentMonth, 1).getDay();
+        const daysInMonth = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
+        let date = 1;
+        for (let i = 0; i < 6; i++) {
+            const row = document.createElement('tr');
+            for (let j = 0; j < 7; j++) {
+                const cell = this.createDayCell(date, i, j, firstDay, daysInMonth);
+                row.appendChild(cell);
+                if (cell.textContent)
+                    date++;
+            }
+            table.appendChild(row);
+        }
+    }
+    createDayCell(date, i, j, firstDay, daysInMonth) {
+        const cell = document.createElement('td');
+        if (i === 0 && j < (firstDay === 0 ? 6 : firstDay - 1) || date > daysInMonth) {
+            cell.textContent = '';
+        }
+        else {
+            const currentDate = new Date(this.currentYear, this.currentMonth, date);
+            this.configureDayCell(cell, currentDate, date);
+        }
+        return cell;
+    }
+    configureDayCell(cell, currentDate, date) {
+        const isDisabled = this.isDateDisabled(currentDate);
+        if (!isDisabled) {
+            cell.textContent = date.toString();
+            cell.className = 'calendar-day';
+            // Pasar explícitamente la fecha al método selectDate
+            cell.addEventListener('click', () => this.selectDate(currentDate));
+            this.addHighlightEvents(cell, currentDate);
+        }
+        else {
+            cell.textContent = date.toString();
+            cell.className = 'calendar-day disabled';
+        }
+    }
+    isDateDisabled(date) {
+        const normalizedDate = this.normalizeDate(date);
+        const normalizedMinDate = this.normalizeDate(this.minDate);
+        const normalizedMaxDate = this.normalizeDate(this.maxDate);
+        return normalizedDate < normalizedMinDate || normalizedDate > normalizedMaxDate ||
+            this.disabledDates.some(d => this.normalizeDate(d).getTime() === normalizedDate.getTime()) ||
+            (this.disableWeekends && (normalizedDate.getDay() === 0 || normalizedDate.getDay() === 6));
+    }
+    addHighlightEvents(cell, date) {
+        if (this.type === 'semana') {
+            cell.addEventListener('mouseover', () => this.highlightWeek(date));
+            cell.addEventListener('mouseout', () => this.clearHighlight());
+        }
+        if (this.type === 'rango') {
+            cell.addEventListener('mouseover', (event) => this.highlightRange(date, event));
+            cell.addEventListener('mouseout', () => {
+                this.clearHighlight();
+                this.hideTooltip();
+            });
+        }
+    }
+    disableOutOfRangeDatesIfNeeded() {
         if (this.selectedDates.length > 0) {
             this.disableOutOfRangeDates(this.selectedDates[0]);
         }
-        // Emitir el evento renderCompleted
-        this.emit('renderCompleted', {
-            startDate: this.startDate,
-            endDate: this.endDate
-        });
     }
     attachInputEvents() {
         if (!this.isGlobalEventRegistered) {
@@ -256,7 +332,8 @@ class RangeCalendar {
             // Restablecer días deshabilitados al abrir el calendario
             const cells = this.calendarContainer.querySelectorAll('.calendar-day');
             cells.forEach((cell) => {
-                const day = parseInt(cell.textContent || '0', 10);
+                var _a;
+                const day = parseInt((_a = cell.textContent) !== null && _a !== void 0 ? _a : '0', 10);
                 if (isNaN(day) || day === 0)
                     return;
                 const cellDate = new Date(this.currentYear, this.currentMonth, day);
@@ -315,6 +392,10 @@ class RangeCalendar {
         return months[month];
     }
     selectDate(date) {
+        if (!(date instanceof Date)) {
+            console.error('El argumento proporcionado no es una instancia de Date:', date);
+            return;
+        }
         if (!this.validateDate(date)) {
             console.error('Fecha inválida proporcionada.');
             return;
@@ -324,6 +405,7 @@ class RangeCalendar {
             return;
         }
         if (this.type === 'día') {
+            // Selección de un solo día
             this.selectedDates = [date];
             this.startDate = date;
             this.endDate = null;
@@ -332,14 +414,17 @@ class RangeCalendar {
             this.emit('dateSelected', { date });
         }
         else if (this.type === 'rango') {
+            // Selección de rango
             if (this.selectedDates.length === 0 || this.selectedDates.length === 2) {
+                // Iniciar un nuevo rango
                 this.selectedDates = [date];
                 this.startDate = date;
                 this.endDate = null;
                 // Aplicar highlight-start a la fecha inicial
                 const cells = this.calendarContainer.querySelectorAll('.calendar-day');
                 cells.forEach((cell) => {
-                    const cellDate = new Date(this.currentYear, this.currentMonth, parseInt(cell.textContent || '0', 10));
+                    var _a;
+                    const cellDate = new Date(this.currentYear, this.currentMonth, parseInt((_a = cell.textContent) !== null && _a !== void 0 ? _a : '0', 10));
                     cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
                     if (cellDate.getTime() === date.getTime()) {
                         cell.classList.add('highlight-start');
@@ -348,6 +433,7 @@ class RangeCalendar {
                 this.disableOutOfRangeDates(date); // Actualizar días deshabilitados
             }
             else {
+                // Completar el rango
                 if (date < this.selectedDates[0]) {
                     console.error('La fecha final no puede ser anterior a la fecha inicial.');
                     return;
@@ -365,6 +451,7 @@ class RangeCalendar {
             }
         }
         else if (this.type === 'semana') {
+            // Selección de semana
             const startOfWeek = this.getStartOfWeek(date);
             const endOfWeek = this.getEndOfWeek(date);
             this.selectedDates = [startOfWeek, endOfWeek];
@@ -378,6 +465,7 @@ class RangeCalendar {
             });
         }
         else if (this.type === 'mes') {
+            // Selección de mes
             const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
             const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
             // Ajustar el rango según maxDate
@@ -407,7 +495,8 @@ class RangeCalendar {
         const maxAllowedDate = new Date(selectedDate);
         maxAllowedDate.setDate(maxAllowedDate.getDate() + this.maxDays - 1);
         cells.forEach((cell) => {
-            const day = parseInt(cell.textContent || '0', 10);
+            var _a;
+            const day = parseInt((_a = cell.textContent) !== null && _a !== void 0 ? _a : '0', 10);
             if (isNaN(day) || day === 0)
                 return;
             const cellDate = new Date(this.currentYear, this.currentMonth, day);
@@ -429,53 +518,66 @@ class RangeCalendar {
     }
     updateInput() {
         if (this.fechaVacia) {
-            // Mostrar el placeholder si fechaVacia es true
-            this.inputElement.value = '';
-            this.inputElement.placeholder = this.placeholder;
+            this.setPlaceholder();
         }
         else {
-            // Manejar los diferentes tipos
-            if (this.type === 'mes') {
-                if (this.startDate && this.endDate) {
-                    const monthNames = [
-                        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-                        'Jul', 'Ago', 'Sept', 'Oct', 'Nov', 'Dic'
-                    ];
-                    const startMonth = monthNames[this.startDate.getMonth()];
-                    const year = this.startDate.getFullYear();
-                    this.inputElement.value = `${startMonth} ${year}`;
-                }
-                else {
-                    this.inputElement.value = '';
-                }
+            switch (this.type) {
+                case 'mes':
+                    this.updateMonthInput();
+                    break;
+                case 'rango':
+                case 'semana':
+                    this.updateRangeOrWeekInput();
+                    break;
+                case 'día':
+                    this.updateDayInput();
+                    break;
             }
-            else if (this.type === 'rango' || this.type === 'semana') {
-                if (this.startDate && this.endDate) {
-                    const startDate = this.formatDate(this.startDate);
-                    const endDate = this.formatDate(this.endDate);
-                    this.inputElement.value = `${startDate}${this.dateSeparator}${endDate}`;
-                    if (this.startDateInput)
-                        this.startDateInput.value = startDate;
-                    if (this.endDateInput)
-                        this.endDateInput.value = endDate;
-                }
-                else {
-                    this.inputElement.value = '';
-                }
-            }
-            else if (this.type === 'día') {
-                if (this.startDate) {
-                    const date = this.formatDate(this.startDate);
-                    this.inputElement.value = date;
-                    if (this.startDateInput)
-                        this.startDateInput.value = date;
-                    if (this.endDateInput)
-                        this.endDateInput.value = '';
-                }
-                else {
-                    this.inputElement.value = '';
-                }
-            }
+        }
+    }
+    setPlaceholder() {
+        this.inputElement.value = '';
+        this.inputElement.placeholder = this.placeholder;
+    }
+    updateMonthInput() {
+        if (this.startDate && this.endDate) {
+            const monthNames = [
+                'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+                'Jul', 'Ago', 'Sept', 'Oct', 'Nov', 'Dic'
+            ];
+            const startMonth = monthNames[this.startDate.getMonth()];
+            const year = this.startDate.getFullYear();
+            this.inputElement.value = `${startMonth} ${year}`;
+        }
+        else {
+            this.inputElement.value = '';
+        }
+    }
+    updateRangeOrWeekInput() {
+        if (this.startDate && this.endDate) {
+            const startDate = this.formatDate(this.startDate);
+            const endDate = this.formatDate(this.endDate);
+            this.inputElement.value = `${startDate}${this.dateSeparator}${endDate}`;
+            if (this.startDateInput)
+                this.startDateInput.value = startDate;
+            if (this.endDateInput)
+                this.endDateInput.value = endDate;
+        }
+        else {
+            this.inputElement.value = '';
+        }
+    }
+    updateDayInput() {
+        if (this.startDate) {
+            const date = this.formatDate(this.startDate);
+            this.inputElement.value = date;
+            if (this.startDateInput)
+                this.startDateInput.value = date;
+            if (this.endDateInput)
+                this.endDateInput.value = '';
+        }
+        else {
+            this.inputElement.value = '';
         }
     }
     /**
@@ -485,6 +587,10 @@ class RangeCalendar {
      * @returns Fecha formateada como string.
      */
     formatDate(date, format) {
+        if (!(date instanceof Date)) {
+            console.error('El argumento proporcionado a formatDate no es una instancia de Date:', date);
+            return '';
+        }
         const day = String(date.getDate()).padStart(2, '0');
         const monthNames = [
             'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
@@ -494,7 +600,7 @@ class RangeCalendar {
         const numericMonth = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         // Usar el formato proporcionado o el configurado
-        const dateFormat = format || this.dateFormat;
+        const dateFormat = format !== null && format !== void 0 ? format : this.dateFormat;
         // Manejar diferentes formatos
         switch (dateFormat) {
             case 'DD MMM YYYY':
@@ -521,84 +627,6 @@ class RangeCalendar {
         this.renderCalendar(); // Vuelve a renderizar el calendario para habilitar todas las fechas
     }
     /**
-     * Actualiza las opciones del calendario dinámicamente.
-     * @param newOptions Opciones nuevas o actualizadas.
-     */
-    updateOptions(newOptions) {
-        const allowedKeys = [
-            'type', 'minDays', 'maxDays', 'startDate', 'endDate',
-            'minDate', 'maxDate', 'dateFormat', 'disabledDates',
-            'disableWeekends', 'dateSeparator', 'tooltipText',
-            'enableTooltip', 'fechaVacia', 'placeholder'
-        ];
-        const filteredOptions = {};
-        // Validar y asignar valores válidos
-        for (const key of allowedKeys) {
-            const value = newOptions[key];
-            if (value !== undefined) {
-                // Validar cada clave según su tipo esperado
-                switch (key) {
-                    case 'type':
-                        if (typeof value === 'string' && ['rango', 'día', 'semana', 'mes'].includes(value)) {
-                            filteredOptions[key] = value;
-                        }
-                        break;
-                    case 'minDays':
-                    case 'maxDays':
-                        if (typeof value === 'number') {
-                            filteredOptions[key] = value;
-                        }
-                        break;
-                    case 'startDate':
-                    case 'endDate':
-                    case 'minDate':
-                    case 'maxDate':
-                        if (value instanceof Date && !isNaN(value.getTime())) {
-                            filteredOptions[key] = value;
-                        }
-                        break;
-                    case 'dateFormat':
-                    case 'dateSeparator':
-                    case 'placeholder':
-                        if (typeof value === 'string') {
-                            filteredOptions[key] = value;
-                        }
-                        break;
-                    case 'disabledDates':
-                        if (Array.isArray(value) && value.every(date => date instanceof Date && !isNaN(date.getTime()))) {
-                            filteredOptions[key] = value;
-                        }
-                        break;
-                    case 'disableWeekends':
-                    case 'enableTooltip':
-                    case 'fechaVacia':
-                        if (typeof value === 'boolean') {
-                            filteredOptions[key] = value;
-                        }
-                        break;
-                    case 'tooltipText':
-                        if (typeof value === 'object' && value !== null && 'one' in value && 'other' in value) {
-                            filteredOptions[key] = value;
-                        }
-                        break;
-                }
-            }
-        }
-        // Validaciones adicionales
-        if (filteredOptions.minDays !== undefined && filteredOptions.maxDays !== undefined && filteredOptions.minDays > filteredOptions.maxDays) {
-            throw new Error('minDays no puede ser mayor que maxDays.');
-        }
-        if (filteredOptions.startDate && (filteredOptions.startDate < this.minDate || filteredOptions.startDate > this.maxDate)) {
-            throw new Error('startDate está fuera del rango permitido.');
-        }
-        if (filteredOptions.endDate && (filteredOptions.endDate < this.minDate || filteredOptions.endDate > this.maxDate)) {
-            throw new Error('endDate está fuera del rango permitido.');
-        }
-        // Asignar las opciones filtradas al calendario
-        Object.assign(this, filteredOptions);
-        this.renderCalendar();
-    }
-    /**
      * Devuelve las fechas seleccionadas en un formato específico.
      * @returns Un objeto con las fechas seleccionadas (inicio y fin).
      */
@@ -612,35 +640,28 @@ class RangeCalendar {
      * @param date Fecha para calcular la semana.
      */
     highlightWeek(date) {
-        let startOfWeek = this.getStartOfWeek(date);
-        let endOfWeek = this.getEndOfWeek(date);
-        // Ajustar el rango si los fines de semana están deshabilitados
-        if (this.disableWeekends) {
-            if (startOfWeek.getDay() === 0) {
-                startOfWeek.setDate(startOfWeek.getDate() + 1); // Mover al lunes
-            }
-            if (endOfWeek.getDay() === 6 || endOfWeek.getDay() === 0) {
-                endOfWeek.setDate(endOfWeek.getDate() - (endOfWeek.getDay() === 6 ? 1 : 2)); // Mover al viernes
-            }
+        const startOfWeek = this.getStartOfWeek(date);
+        const endOfWeek = this.getEndOfWeek(date);
+        // Validar el rango máximo permitido
+        const diff = Math.abs(Math.ceil((endOfWeek.getTime() - startOfWeek.getTime()) / (1000 * 60 * 60 * 24))) + 1;
+        if (this.maxDays && diff > this.maxDays) {
+            return; // No resaltar la semana si excede el rango máximo
         }
         const cells = this.calendarContainer.querySelectorAll('.calendar-day');
         cells.forEach((cell) => {
-            const cellDate = new Date(this.currentYear, this.currentMonth, parseInt(cell.textContent || '0', 10));
-            // Verificar si el día está dentro del rango ajustado
-            if (cellDate >= startOfWeek && cellDate <= endOfWeek) {
-                const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
-                if (this.disableWeekends && isWeekend) {
-                    return; // No resaltar fines de semana si están deshabilitados
-                }
-                if (cellDate.getTime() === startOfWeek.getTime()) {
-                    cell.classList.add('highlight-start');
-                }
-                else if (cellDate.getTime() === endOfWeek.getTime()) {
-                    cell.classList.add('highlight-end');
-                }
-                else {
-                    cell.classList.add('highlight-range');
-                }
+            var _a;
+            const cellDate = new Date(this.currentYear, this.currentMonth, parseInt((_a = cell.textContent) !== null && _a !== void 0 ? _a : '0', 10));
+            // Limpiar clases previas
+            cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
+            // Aplicar las clases correspondientes
+            if (cellDate.getTime() === startOfWeek.getTime()) {
+                cell.classList.add('highlight-start');
+            }
+            else if (cellDate.getTime() === endOfWeek.getTime()) {
+                cell.classList.add('highlight-end');
+            }
+            else if (cellDate > startOfWeek && cellDate < endOfWeek) {
+                cell.classList.add('highlight-range');
             }
         });
     }
@@ -654,41 +675,35 @@ class RangeCalendar {
             return;
         }
         const startDate = this.selectedDates[0];
-        // Calcular la fecha máxima permitida basada en maxDays
-        const maxAllowedDate = new Date(startDate);
-        maxAllowedDate.setDate(maxAllowedDate.getDate() + this.maxDays - 1);
-        // Validar que la fecha final no exceda el rango permitido
-        if (endDate > maxAllowedDate) {
-            this.hideTooltip();
+        // Calcular la diferencia en días
+        const diff = Math.abs(Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))) + 1;
+        // Validar el rango máximo permitido
+        if (this.maxDays && diff > this.maxDays) {
+            this.hideTooltip(); // Ocultar el tooltip si el rango excede el máximo permitido
             return;
         }
         const cells = this.calendarContainer.querySelectorAll('.calendar-day');
         cells.forEach((cell) => {
-            const cellDate = new Date(this.currentYear, this.currentMonth, parseInt(cell.textContent || '0', 10));
+            var _a;
+            const cellDate = new Date(this.currentYear, this.currentMonth, parseInt((_a = cell.textContent) !== null && _a !== void 0 ? _a : '0', 10));
             // Limpiar clases previas
             cell.classList.remove('highlight-start', 'highlight-range', 'highlight-end');
-            // Si solo hay una fecha seleccionada, aplicar highlight-start
-            if (this.selectedDates.length === 1 && cellDate.getTime() === startDate.getTime()) {
+            // Aplicar las clases correspondientes
+            if (cellDate.getTime() === startDate.getTime()) {
                 cell.classList.add('highlight-start');
             }
-            // Si hay un rango definido, aplicar las clases correspondientes
-            if (cellDate >= startDate && cellDate <= endDate) {
-                if (cellDate.getTime() === startDate.getTime()) {
-                    cell.classList.add('highlight-start');
-                }
-                else if (cellDate.getTime() === endDate.getTime()) {
-                    cell.classList.add('highlight-end');
-                }
-                else {
-                    cell.classList.add('highlight-range');
-                }
+            else if (cellDate.getTime() === endDate.getTime()) {
+                cell.classList.add('highlight-end');
+            }
+            else if (cellDate > startDate && cellDate < endDate) {
+                cell.classList.add('highlight-range');
             }
         });
         // Mostrar el tooltip solo si está habilitado
         if (this.enableTooltip && event) {
-            const diff = Math.abs(Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))) + 1;
             const text = diff === 1 ? `${diff} ${this.tooltipText.one}` : `${diff} ${this.tooltipText.other}`;
-            this.showTooltip(text, event.clientX, event.clientY);
+            const targetCell = event.target;
+            this.showTooltip(text, event.clientX, event.clientY, targetCell);
         }
     }
     /**
@@ -697,19 +712,28 @@ class RangeCalendar {
      * @param x Posición X del mouse.
      * @param y Posición Y del mouse.
      */
-    showTooltip(text, x, y) {
+    showTooltip(text, x, y, targetCell) {
         let tooltip = document.querySelector('.calendar-tooltip');
         if (!tooltip) {
             tooltip = document.createElement('div');
             tooltip.className = 'calendar-tooltip';
             this.calendarContainer.appendChild(tooltip);
         }
+        // Actualizar el contenido del tooltip
         tooltip.textContent = text;
-        const maxX = window.innerWidth - tooltip.offsetWidth;
-        const maxY = window.innerHeight - tooltip.offsetHeight;
-        tooltip.style.left = `${Math.min(x + 10, maxX)}px`;
-        tooltip.style.top = `${Math.min(y + 10, maxY)}px`;
+        // Asegurarse de que el tooltip esté visible para calcular su tamaño
         tooltip.style.display = 'block';
+        tooltip.style.visibility = 'hidden'; // Ocultarlo temporalmente para evitar parpadeos
+        // Obtener las coordenadas de la celda
+        const cellRect = targetCell.getBoundingClientRect();
+        const calendarRect = this.calendarContainer.getBoundingClientRect();
+        // Calcular la posición del tooltip
+        const tooltipX = cellRect.left - calendarRect.left + (cellRect.width / 2) - (tooltip.offsetWidth / 2);
+        const tooltipY = cellRect.top - calendarRect.top - tooltip.offsetHeight - 5; // Ajustar para que quede encima
+        // Aplicar las coordenadas calculadas
+        tooltip.style.left = `${tooltipX}px`;
+        tooltip.style.top = `${tooltipY}px`;
+        tooltip.style.visibility = 'visible'; // Hacerlo visible nuevamente
     }
     /**
      * Oculta el tooltip.
@@ -753,7 +777,13 @@ class RangeCalendar {
         this.renderCalendar();
     }
     validateDate(date) {
-        return date instanceof Date && !isNaN(date.getTime());
+        if (!(date instanceof Date)) {
+            console.error('El argumento proporcionado no es una instancia de Date:', date);
+            return false;
+        }
+        const normalizedDate = this.normalizeDate(date);
+        console.log('Validando fecha normalizada:', normalizedDate);
+        return normalizedDate instanceof Date && !isNaN(normalizedDate.getTime());
     }
     destroy() {
         document.removeEventListener('click', this.globalClickHandler);

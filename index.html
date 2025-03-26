@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prueba RangeCalendar</title>
     <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-3.7.1.slim.js" integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -37,8 +38,8 @@
             showTooltip: true,
             minDays: 1,
             maxDays: 10,
-            startDate: new Date('2025-03-04'),
-            endDate: new Date('2025-03-11'),
+            startDate: new Date(2025, 2, 3),
+            endDate: new Date(2025, 2, 9),
             fechaVacia: false
         });
 
@@ -68,9 +69,15 @@
         });
 
         calendar.on('dateSelected', (e) => {
-            console.log('Fecha seleccionada:', e.date);
-            $('#inicio').val(calendar.formatDate(e.date, 'YYYY/MM/DD')); // Fecha seleccionada en formato dinámico
-            $('#fin').val(calendar.formatDate(e.date, 'YYYY/MM/DD')); // Misma fecha para inicio y fin
+            const selectedDate = e.date instanceof Date ? e.date : new Date(e.date);
+            console.log('Fecha seleccionada:', selectedDate);
+
+            if (isNaN(selectedDate.getTime())) {
+                console.error('La fecha seleccionada no es válida.');
+                return;
+            }
+            $('#inicio').val(calendar.formatDate(selectedDate, 'YYYY/MM/DD')); // Fecha de inicio en formato dinámico
+            $('#fin').val(calendar.formatDate(selectedDate, 'YYYY/MM/DD')); // Fecha de fin en formato dinámico
         });
 
         calendar.on('weekSelected', (e) => {

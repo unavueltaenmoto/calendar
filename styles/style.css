@@ -14,7 +14,7 @@
 
 /* Estilo específico para el tipo "mes" */
 .calendar-container--month {
-    width: 250px; /* Ancho reducido para la vista de meses */
+  margin: auto;
 }
 
 /* Mostrar el calendario con animación */
@@ -160,16 +160,18 @@
 
 /* Tooltip del calendario */
 .calendar-tooltip {
-    position: absolute;
-    background-color: #333;
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 1000;
-    display: none;
-    white-space: nowrap;
+  background-color: #fff;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  color: var(--color-fg-tooltip);
+  font-size: 12px;
+  margin-top: -4px;
+  padding: 2px 4px;
+  pointer-events: none;
+  position: absolute;
+  visibility: hidden;
+  white-space: nowrap;
+  z-index: 1;
 }
 
 /* Animación de entrada */
@@ -200,9 +202,8 @@
 /* Contenedor para los meses en el calendario */
 .calendar-table-months {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 columnas de igual tamaño */
+    grid-template-columns: repeat(4, 1fr); /* 3 columnas de igual tamaño */
     gap: 5px; /* Espaciado más pequeño entre los cuadros */
-    padding: 10px; /* Espaciado interno */
     justify-items: center; /* Centrar los elementos horizontalmente */
     align-items: center; /* Centrar los elementos verticalmente */
     box-sizing: border-box; /* Asegura que el padding no afecte el tamaño total */
@@ -213,15 +214,21 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 40px; /* Ancho reducido */
-    height: 40px; /* Altura igual al ancho para que sea cuadrado */
-    text-align: center;
-    font-size: 12px; /* Tamaño de fuente más pequeño */
-    font-weight: bold;
-    border: 1px solid transparent; /* Borde inicial transparente */
-    border-radius: 2px; /* Bordes redondeados */
+    width: 68px; /* Ancho reducido */
+    height: 68px; /* Altura igual al ancho para que sea cuadrado */
+    font-weight: 400;
     cursor: pointer;
     box-sizing: border-box; /* Incluir el borde en el tamaño total */
+    /* Incluir fint family */
+    color: #2d3338;
+    text-align: center;
+    border-radius: 4px;
+    border: 1px solid rgba(212,214,225,0.5);
+    cursor: pointer;
+    margin: 2px;
+    padding-top: 19px;
+    padding-bottom: 19px;
+    font-size: 12px;
 }
 
 /* Mes seleccionado */
@@ -233,14 +240,33 @@
 
 /* Mes deshabilitado */
 .calendar-month.disabled {
-    background-color: #f5f5f5; /* Fondo gris claro */
-    color: #ccc; /* Texto gris */
     cursor: not-allowed;
+    color: #d4d6e1;
+    border: 1px solid rgba(212,214,225,0.5) !important;
 }
 
 /* Hover en meses habilitados */
 .calendar-month:hover:not(.disabled) {
-    background-color: rgba(213, 0, 108, 0.1); /* Fondo rosado claro */
-    color: #d5006c; /* Texto rosado */
+    background: #d5006c;
+    color: white; /* Texto rosado */
     border: 1px solid #d5006c; /* Borde rosado */
+    
+  
+}
+
+.calendar-month.highlight-start {
+    background-color: #d5006c;
+    color: #fff;
+    border-radius: 4px;
+}
+
+.calendar-month.highlight-range {
+    background-color: rgba(213, 0, 108, 0.1);
+    color: #d5006c;
+}
+
+.calendar-month.highlight-end {
+    background-color: #d5006c;
+    color: #fff;
+    border-radius: 4px;
 }
